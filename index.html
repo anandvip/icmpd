@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Crop Monitoring and Planning Dashboard</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #FFA000;
+            --tertiary-color: #2196F3;
+            --background-color: #F1F8E9;
+            --card-background: #FFFFFF;
+            --text-color: #333333;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--card-background);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 30px; }
+        h2 { font-size: 2em; margin-top: 40px; }
+        h3 { font-size: 1.5em; margin-top: 20px; }
+        .section {
+            margin-top: 30px;
+            background-color: #E8F5E9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        tr {
+            background-color: white;
+        }
+        tr:hover {
+            background-color: #f0f0f0;
+        }
+        .profit { color: green; font-weight: bold; }
+        .loss { color: red; font-weight: bold; }
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .grid-item {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard">
+        <h1>🌾 Indian Crop Monitoring and Planning Dashboard 🌾</h1>
+        
+        <div class="section">
+            <h2>💰 Crop Cost and Revenue Estimates (per acre)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Crop</th>
+                        <th>Estimated Cost</th>
+                        <th>Estimated Revenue</th>
+                        <th>Potential Profit/Loss</th>
+                        <th>Water Requirement (mm)</th>
+                    </tr>
+                </thead>
+                <tbody id="cropEstimates"></tbody>
+            </table>
+            <div class="chart-container">
+                <canvas id="cropComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🏪 Current Market Prices</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Crop</th>
+                        <th>Market Price (INR/quintal)</th>
+                        <th>Price Trend</th>
+                    </tr>
+                </thead>
+                <tbody id="marketPrices"></tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>🏛️ Government Subsidies and Support</h2>
+            <div class="grid-container" id="subsidies"></div>
+        </div>
+
+        <div class="section">
+            <h2>💧 Water Management</h2>
+            <div class="chart-container">
+                <canvas id="waterRequirementChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cropData = [
+            { crop: "Wheat", cost: 25000, revenue: 35000, water: 450 },
+            { crop: "Rice", cost: 30000, revenue: 45000, water: 1200 },
+            { crop: "Maize", cost: 20000, revenue: 28000, water: 500 },
+            { crop: "Soybean", cost: 22000, revenue: 32000, water: 450 },
+            { crop: "Cotton", cost: 35000, revenue: 50000, water: 700 }
+        ];
+
+        const marketPrices = [
+            { crop: "Wheat", price: 2015, trend: "↑" },
+            { crop: "Rice", price: 1960, trend: "↓" },
+            { crop: "Maize", price: 1870, trend: "→" },
+            { crop: "Soybean", price: 3920, trend: "↑" },
+            { crop: "Cotton", price: 6230, trend: "↑" }
+        ];
+
+        const subsidies = [
+            { name: "Fertilizer Subsidy", description: "₹1,05,222 crore allocated for 2023-24" },
+            { name: "PM-KISAN", description: "₹6,000 per year to eligible farmer families" },
+            { name: "Interest Subvention", description: "2% interest subsidy on crop loans up to ₹3 lakh" },
+            { name: "Pradhan Mantri Fasal Bima Yojana", description: "Crop insurance scheme with low premiums" }
+        ];
+
+        function formatINR(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function updateDashboard() {
+            // Update Crop Estimates
+            const cropEstimatesBody = document.getElementById('cropEstimates');
+            cropData.forEach(item => {
+                const row = cropEstimatesBody.insertRow();
+                row.insertCell(0).textContent = item.crop;
+                row.insertCell(1).textContent = formatINR(item.cost);
+                row.insertCell(2).textContent = formatINR(item.revenue);
+                const profitLoss = item.revenue - item.cost;
+                const profitLossCell = row.insertCell(3);
+                profitLossCell.textContent = formatINR(profitLoss);
+                profitLossCell.classList.add(profitLoss >= 0 ? 'profit' : 'loss');
+                row.insertCell(4).textContent = item.water;
+            });
+
+            // Update Market Prices
+            const marketPricesBody = document.getElementById('marketPrices');
+            marketPrices.forEach(item => {
+                const row = marketPricesBody.insertRow();
+                row.insertCell(0).textContent = item.crop;
+                row.insertCell(1).textContent = formatINR(item.price);
+                row.insertCell(2).textContent = item.trend;
+            });
+
+            // Update Subsidies
+            const subsidiesContainer = document.getElementById('subsidies');
+            subsidies.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'grid-item';
+                div.innerHTML = `<h3>${item.name}</h3><p>${item.description}</p>`;
+                subsidiesContainer.appendChild(div);
+            });
+
+            // Create Crop Comparison Chart
+            const ctx = document.getElementById('cropComparisonChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: cropData.map(item => item.crop),
+                    datasets: [
+                        {
+                            label: 'Estimated Cost',
+                            data: cropData.map(item => item.cost),
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            borderColor: 'rgb(255, 99, 132)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Estimated Revenue',
+                            data: cropData.map(item => item.revenue),
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                            borderColor: 'rgb(75, 192, 192)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount (INR)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toLocaleString('en-IN');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formatINR(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Create Water Requirement Chart
+            const waterCtx = document.getElementById('waterRequirementChart').getContext('2d');
+            new Chart(waterCtx, {
+                type: 'bar',
+                data: {
+                    labels: cropData.map(item => item.crop),
+                    datasets: [{
+                        label: 'Water Requirement (mm)',
+                        data: cropData.map(item => item.water),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Water Requirement (mm)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        updateDashboard();
+    </script>
+</body>
+</html>
